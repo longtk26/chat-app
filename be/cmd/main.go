@@ -1,15 +1,19 @@
 package main
 
 import (
-	"github.com/gofiber/fiber/v3"
+	"context"
+
+	"github.com/longtk26/chat-app/internal"
+	"github.com/longtk26/chat-app/internal/modules"
+	"github.com/matzefriedrich/parsley/pkg/bootstrap"
 )
 
 func main() {
-	app := fiber.New()
+	ctx := context.Background()
 
-	app.Get("/", func(c fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
-
-	app.Listen(":3000")
+	bootstrap.RunParsleyApplication(ctx, internal.NewApp,
+		modules.ConfigureFiber,
+		modules.ConfigureDatabase,
+		modules.ConfigureAuth,
+	)
 }

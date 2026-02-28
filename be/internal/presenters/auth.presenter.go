@@ -2,8 +2,8 @@ package presenters
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/longtk26/chat-app/be/internal/presenters/dto"
-	"github.com/longtk26/chat-app/be/internal/usecases"
+	"github.com/longtk26/chat-app/internal/presenters/dto"
+	"github.com/longtk26/chat-app/internal/usecases"
 )
 
 type AuthPresenter struct {
@@ -14,9 +14,9 @@ func NewAuthPresenter(authUseCase usecases.IAuthUseCase) *AuthPresenter {
 	return &AuthPresenter{authUseCase: authUseCase}
 }
 
-func (p *AuthPresenter) Login(c *fiber.Ctx) error {
+func (p *AuthPresenter) Login(c fiber.Ctx) error {
 	var req dto.LoginRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
@@ -25,17 +25,14 @@ func (p *AuthPresenter) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	return c.JSON(fiber.Map{"token": token})
+	return c.Status(fiber.StatusOK).JSON(dto.LoginResponse{
+		AccessToken: token,
+	})
 }
 
-func (p *AuthPresenter) Register(c *fiber.Ctx) error {
-	type RegisterRequest struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-
-	var req RegisterRequest
-	if err := c.BodyParser(&req); err != nil {
+func (p *AuthPresenter) Register(c fiber.Ctx) error {
+	var req dto.RegisterRequest
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
@@ -43,5 +40,5 @@ func (p *AuthPresenter) Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not register user"})
 	}
 
-	return c.JSON(fiber.Map{"message": "User registered successfully"})
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "User registered successfully"})
 }
