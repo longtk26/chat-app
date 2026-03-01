@@ -1,31 +1,32 @@
 package modules
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
+	"fmt"
+
 	"github.com/longtk26/chat-app/configs"
 	db "github.com/longtk26/chat-app/infrastructure/db"
 	"github.com/longtk26/chat-app/infrastructure/db/sqlc/out"
 	repositories "github.com/longtk26/chat-app/infrastructure/repo"
-	"github.com/matzefriedrich/parsley/pkg/registration"
 	"github.com/matzefriedrich/parsley/pkg/types"
 )
 
 func ConfigureDatabase(registry types.ServiceRegistry) error {
-	// Register DB config
-	registration.RegisterInstance(registry, configs.LoadDBConfig())
+	var configs = configs.LoadDBConfig()
 
-	// Register pgxpool.Pool (singleton)
-	registration.RegisterSingleton(registry, func(cfg configs.DBConfig) (*pgxpool.Pool, error) {
-		return db.NewPostgresPool(cfg)
-	})
+	pool, err := db.NewPostgresPool(configs)
+	if err != nil {
+		return fmt.Errorf("failed to create PostgreSQL connection pool: %w", err)
+	}
 
 	// Register sqlc Queries
-	registration.RegisterSingleton(registry, func(pool *pgxpool.Pool) *out.Queries {
-		return out.New(pool)
-	})
+	queries := out.New(pool)
+	registry.Register(func() *out.Queries {
+		fmt.Println("Creating sqlc Queries...")
+		return queries
+	}, types.LifetimeSingleton)
 
 	// Register repository implementations
-	registration.RegisterSingleton(registry, repositories.NewUserRepository)
+	registry.Register(repositories.NewUserRepository, types.LifetimeSingleton)
 
 	return nil
 }

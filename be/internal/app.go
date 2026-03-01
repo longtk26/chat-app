@@ -2,26 +2,30 @@ package internal
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/longtk26/chat-app/internal/routers"
 	"github.com/matzefriedrich/parsley/pkg/bootstrap"
 )
 
-var _ bootstrap.Application = (*App)(nil)
-
-type App struct {
-	app      *fiber.App
-	handlers []routers.RouteHandler
+type application struct {
+	app *fiber.App
 }
 
-func NewApp(app *fiber.App, handlers []routers.RouteHandler) bootstrap.Application {
-	for _, h := range handlers {
-		h.Register(app)
+var _ bootstrap.Application = &application{}
+
+func NewApp(app *fiber.App, routeHandlers []routers.RouteHandler) bootstrap.Application {
+	fmt.Println("Registering route handlers...", routeHandlers)
+	for _, routeHandler := range routeHandlers {
+		routeHandler.Register(app)
 	}
-	return &App{app: app, handlers: handlers}
+
+	return &application{
+		app: app,
+	}
 }
 
-func (a *App) Run(_ context.Context) error {
-	return a.app.Listen(":3000")
+func (a *application) Run(_ context.Context) error {
+	return a.app.Listen(":5502")
 }

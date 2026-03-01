@@ -6,13 +6,16 @@ import (
 	"github.com/matzefriedrich/parsley/pkg/types"
 )
 
+var _ types.ModuleFunc = ConfigureFiber
+
 func ConfigureFiber(registry types.ServiceRegistry) error {
 	registration.RegisterInstance(registry, fiber.Config{
-		AppName: "chat-app",
+		AppName:   "chat-app",
+		Immutable: true,
 	})
 
 	registry.Register(newFiber, types.LifetimeSingleton)
-
+	registry.RegisterModule(RegisterRouteHandlers)
 	return nil
 }
 

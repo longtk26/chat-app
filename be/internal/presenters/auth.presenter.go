@@ -1,6 +1,8 @@
 package presenters
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/longtk26/chat-app/internal/presenters/dto"
 	"github.com/longtk26/chat-app/internal/usecases"
@@ -11,6 +13,7 @@ type AuthPresenter struct {
 }
 
 func NewAuthPresenter(authUseCase usecases.IAuthUseCase) *AuthPresenter {
+	fmt.Println("Creating AuthPresenter...")
 	return &AuthPresenter{authUseCase: authUseCase}
 }
 

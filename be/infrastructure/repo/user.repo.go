@@ -11,13 +11,14 @@ import (
 	"github.com/longtk26/chat-app/internal/domain/repo"
 )
 
-var _ repo.IUserRepo = (*UserRepository)(nil)
+var _ repo.IUserRepo = &UserRepository{}
 
 type UserRepository struct {
 	queries *out.Queries
 }
 
 func NewUserRepository(queries *out.Queries) repo.IUserRepo {
+	fmt.Println("Creating UserRepository...")
 	return &UserRepository{queries: queries}
 }
 

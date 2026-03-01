@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/longtk26/chat-app/internal/domain/entities"
@@ -19,6 +20,7 @@ type AuthUseCase struct {
 }
 
 func NewAuthUseCase(userRepo repo.IUserRepo) IAuthUseCase {
+	fmt.Println("Creating auth use case")
 	return &AuthUseCase{userRepo: userRepo}
 }
 
@@ -50,6 +52,7 @@ func (a *AuthUseCase) Register(username, password string) error {
 	}
 
 	if err := a.userRepo.CreateUser(ctx, newUser); err != nil {
+		fmt.Printf("Error creating user: %v\n", err)
 		return errors.New("could not register user")
 	}
 
