@@ -46,6 +46,11 @@ func (a *AuthUseCase) Login(username, password string) (string, error) {
 func (a *AuthUseCase) Register(username, password string) error {
 	ctx := context.Background()
 
+	foundUser, err := a.userRepo.GetUserByEmail(ctx, username)
+	if err == nil && foundUser != nil {
+		return errors.New("user already exists")
+	}
+
 	newUser := &entities.UserEntity{
 		ID:       uuid.New().String(),
 		Username: username,
