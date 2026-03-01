@@ -9,10 +9,10 @@ import (
 	"github.com/longtk26/chat-app/configs"
 )
 
-func NewPostgresPool(cfg configs.DBConfig) (*pgxpool.Pool, error) {
+func NewPostgresPool(cfg configs.AppConfig) (*pgxpool.Pool, error) {
 	ctx := context.Background()
-	fmt.Printf("Connecting to PostgreSQL with DSN: %s\n", cfg.DSN())
-	pool, err := pgxpool.New(ctx, cfg.DSN())
+
+	pool, err := pgxpool.New(ctx, cfg.DBConfig.DBUrl)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}

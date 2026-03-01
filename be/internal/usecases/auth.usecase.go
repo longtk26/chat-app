@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/longtk26/chat-app/configs"
 	"github.com/longtk26/chat-app/internal/domain/entities"
 	"github.com/longtk26/chat-app/internal/domain/repo"
 )
@@ -16,12 +17,13 @@ type IAuthUseCase interface {
 }
 
 type AuthUseCase struct {
-	userRepo repo.IUserRepo
+	userRepo  repo.IUserRepo
+	appConfig configs.AppConfig
 }
 
-func NewAuthUseCase(userRepo repo.IUserRepo) IAuthUseCase {
+func NewAuthUseCase(userRepo repo.IUserRepo, appConfig configs.AppConfig) IAuthUseCase {
 	fmt.Println("Creating auth use case")
-	return &AuthUseCase{userRepo: userRepo}
+	return &AuthUseCase{userRepo: userRepo, appConfig: appConfig}
 }
 
 func (a *AuthUseCase) Login(username, password string) (string, error) {

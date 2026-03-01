@@ -11,18 +11,17 @@ import (
 )
 
 func ConfigureDatabase(registry types.ServiceRegistry) error {
-	var configs = configs.LoadDBConfig()
+	appConfig := configs.LoadAppConfig()
 
-	pool, err := db.NewPostgresPool(configs)
+	pool, err := db.NewPostgresPool(appConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create PostgreSQL connection pool: %w", err)
+		return fmt.Errorf("failed to create PostgreSQL pool: %w", err)
 	}
 
-	// Register sqlc Queries
-	queries := out.New(pool)
+	sqlcQueries := out.New(pool)
 	registry.Register(func() *out.Queries {
 		fmt.Println("Creating sqlc Queries...")
-		return queries
+		return sqlcQueries
 	}, types.LifetimeSingleton)
 
 	// Register repository implementations
