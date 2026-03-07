@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
 	"github.com/longtk26/chat-app/configs"
 	"github.com/longtk26/chat-app/internal/routers"
@@ -18,6 +19,15 @@ type application struct {
 var _ bootstrap.Application = &application{}
 
 func NewApp(app *fiber.App, routeHandlers []routers.RouteHandler, config configs.AppConfig) bootstrap.Application {
+	fmt.Println("Setting up WebSocket route...")
+	app.Use("/ws", func(c fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
 	fmt.Println("Registering route handlers...", routeHandlers)
 	for _, routeHandler := range routeHandlers {
 		routeHandler.Register(app)

@@ -64,3 +64,27 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 		Password: user.Password,
 	}, nil
 }
+
+func (r *UserRepository) ListUsers(ctx context.Context) ([]*entities.UserEntity, error) {
+	users, err := r.queries.ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	var userEntities []*entities.UserEntity
+	for _, user := range users {
+		uid, err := uuid.FromBytes(user.ID.Bytes[:])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse user ID: %w", err)
+		}
+
+		userEntities = append(userEntities, &entities.UserEntity{
+			ID:       uid.String(),
+			Username: user.Username,
+			Email:    user.Email,
+			Password: user.Password,
+		})
+	}
+
+	return userEntities, nil
+}

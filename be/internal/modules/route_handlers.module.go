@@ -19,6 +19,9 @@ func RegisterRouteHandlers(registry types.ServiceRegistry) error {
 	}
 
 	registration.RegisterTransient(registry, routers.NewAuthRoute)
+	registration.RegisterTransient(registry, routers.NewMessagesRoute)
+	registration.RegisterTransient(registry, routers.NewUsersRoute)
+	registration.RegisterTransient(registry, routers.NewConversationsRoute)
 
 	return nil
 }

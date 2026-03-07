@@ -16,5 +16,8 @@ func main() {
 		modules.ConfigureFiber,
 		modules.ConfigureDatabase,
 		modules.ConfigureAuth,
+		modules.ConfigureMessages,
+		modules.ConfigureUsers,
+		modules.ConfigureConversations,
 	)
 }

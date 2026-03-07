@@ -11,3 +11,7 @@ INSERT INTO users (
     $1, $2, $3, $4
 )
 RETURNING id, username, email, password;
+
+-- name: ListUsers :many
+SELECT id, username, email, password
+FROM users;
