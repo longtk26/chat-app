@@ -100,6 +100,65 @@ func (q *Queries) ListConversationsByUser(ctx context.Context, userID pgtype.UUI
 	return items, nil
 }
 
+const listConversationsByUserWithPagination = `-- name: ListConversationsByUserWithPagination :many
+SELECT 
+    c.id, c.title, c.type, c.last_message_id, c.created_at, c.updated_at, c.deleted_at,
+    COUNT(*) OVER() AS total_conversations
+FROM conversations c
+INNER JOIN conversation_participants cp 
+    ON cp.conversation_id = c.id
+WHERE cp.user_id = $1
+  AND c.deleted_at IS NULL
+ORDER BY c.updated_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListConversationsByUserWithPaginationParams struct {
+	UserID pgtype.UUID
+	Limit  int32
+	Offset int32
+}
+
+type ListConversationsByUserWithPaginationRow struct {
+	ID                 pgtype.UUID
+	Title              pgtype.Text
+	Type               string
+	LastMessageID      pgtype.UUID
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
+	TotalConversations int64
+}
+
+func (q *Queries) ListConversationsByUserWithPagination(ctx context.Context, arg ListConversationsByUserWithPaginationParams) ([]ListConversationsByUserWithPaginationRow, error) {
+	rows, err := q.db.Query(ctx, listConversationsByUserWithPagination, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationsByUserWithPaginationRow
+	for rows.Next() {
+		var i ListConversationsByUserWithPaginationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Type,
+			&i.LastMessageID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.TotalConversations,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const softDeleteConversation = `-- name: SoftDeleteConversation :exec
 UPDATE conversations
 SET deleted_at = NOW()

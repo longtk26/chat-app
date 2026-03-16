@@ -16,7 +16,22 @@ func NewConversationsPresenter(usecase usecases.IConversationsUsecase) *Conversa
 	}
 }
 
-func (p *ConversationsPresenter) ListConversations(c fiber.Ctx) {}
+func (p *ConversationsPresenter) ListConversations(c fiber.Ctx) {
+	var query dto.ListConversationsQueryDto
+
+	if err := c.Bind().Query(&query); err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid query parameters"})
+		return
+	}
+
+	resp, err := p.usecase.ListConversations(c.Context(), query)
+	if err != nil {
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to list conversations"})
+		return
+	}
+
+	c.JSON(resp)
+}
 
 func (p *ConversationsPresenter) CreateConversation(c fiber.Ctx) {
 	var req dto.CreateConversationRequestDto

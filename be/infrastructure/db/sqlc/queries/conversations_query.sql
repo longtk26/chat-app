@@ -21,6 +21,18 @@ WHERE cp.user_id = $1
   AND c.deleted_at IS NULL
 ORDER BY c.updated_at DESC;
 
+-- name: ListConversationsByUserWithPagination :many
+SELECT 
+    c.*,
+    COUNT(*) OVER() AS total_conversations
+FROM conversations c
+INNER JOIN conversation_participants cp 
+    ON cp.conversation_id = c.id
+WHERE cp.user_id = $1
+  AND c.deleted_at IS NULL
+ORDER BY c.updated_at DESC
+LIMIT $2 OFFSET $3;
+
 -- name: UpdateConversationLastMessage :exec
 UPDATE conversations
 SET last_message_id = $2,

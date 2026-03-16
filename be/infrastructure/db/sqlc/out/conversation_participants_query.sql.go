@@ -97,6 +97,40 @@ func (q *Queries) IsParticipantInConversation(ctx context.Context, arg IsPartici
 	return is_participant, err
 }
 
+const listConversationUsers = `-- name: ListConversationUsers :many
+SELECT u.id, u.username
+FROM conversation_participants cp
+INNER JOIN users u ON u.id = cp.user_id
+WHERE cp.conversation_id = $1
+    AND u.deleted_at IS NULL
+ORDER BY u.username ASC
+`
+
+type ListConversationUsersRow struct {
+	ID       pgtype.UUID
+	Username string
+}
+
+func (q *Queries) ListConversationUsers(ctx context.Context, conversationID pgtype.UUID) ([]ListConversationUsersRow, error) {
+	rows, err := q.db.Query(ctx, listConversationUsers, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationUsersRow
+	for rows.Next() {
+		var i ListConversationUsersRow
+		if err := rows.Scan(&i.ID, &i.Username); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listParticipantsByConversation = `-- name: ListParticipantsByConversation :many
 SELECT id, conversation_id, user_id, joined_at
 FROM conversation_participants

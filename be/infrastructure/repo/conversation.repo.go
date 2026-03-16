@@ -53,3 +53,92 @@ func (r *ConversationsRepo) CreateConversation(ctx context.Context, conversation
 
 	return nil
 }
+
+func (r *ConversationsRepo) ListConversationsByUserWithPagination(ctx context.Context, userID string, limit, offset int) (repo.ListConversationsResult, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return repo.ListConversationsResult{}, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+
+	rows, err := r.queries.ListConversationsByUserWithPagination(ctx, out.ListConversationsByUserWithPaginationParams{
+		UserID: pgtype.UUID{Bytes: uid, Valid: true},
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+
+	if err != nil {
+		return repo.ListConversationsResult{}, fmt.Errorf("failed to list conversations: %w", err)
+	}
+
+	conversations := make([]entities.ConversationEntity, 0, len(rows))
+	for _, row := range rows {
+		conID, err := uuid.FromBytes(row.ID.Bytes[:])
+		if err != nil {
+			return repo.ListConversationsResult{}, fmt.Errorf("failed to parse conversation ID: %w", err)
+		}
+
+		conversationUsersRows, err := r.queries.ListConversationUsers(ctx, row.ID)
+		if err != nil {
+			return repo.ListConversationsResult{}, fmt.Errorf("failed to list conversation users: %w", err)
+		}
+
+		conversationUsers := make([]entities.UserConversationEntity, 0, len(conversationUsersRows))
+		for _, userRow := range conversationUsersRows {
+			if !userRow.ID.Valid {
+				continue
+			}
+
+			userID, err := uuid.FromBytes(userRow.ID.Bytes[:])
+			if err != nil {
+				return repo.ListConversationsResult{}, fmt.Errorf("failed to parse user ID: %w", err)
+			}
+
+			conversationUsers = append(conversationUsers, entities.UserConversationEntity{
+				UserID:   userID,
+				Username: userRow.Username,
+			})
+		}
+
+		lastMessageID := ""
+		if row.LastMessageID.Valid {
+			lmID, err := uuid.FromBytes(row.LastMessageID.Bytes[:])
+			if err != nil {
+				return repo.ListConversationsResult{}, fmt.Errorf("failed to parse last message ID: %w", err)
+			}
+			lastMessageID = lmID.String()
+		}
+
+		title := ""
+		if row.Title.Valid {
+			title = row.Title.String
+		}
+
+		conversations = append(conversations, entities.ConversationEntity{
+			ID:            conID,
+			Title:         title,
+			Type:          row.Type,
+			Users:         conversationUsers,
+			LastMessageID: lastMessageID,
+		})
+	}
+
+	totalItems := 0
+	if len(rows) > 0 {
+		totalItems = int(rows[0].TotalConversations)
+	}
+
+	totalPages := 0
+	if totalItems > 0 {
+		totalPages = (totalItems + limit - 1) / limit
+	}
+
+	return repo.ListConversationsResult{
+		Conversations: conversations,
+		TotalItems:    totalItems,
+		TotalPages:    totalPages,
+	}, nil
+}

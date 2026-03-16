@@ -24,6 +24,14 @@ SELECT *
 FROM conversation_participants
 WHERE conversation_id = $1;
 
+-- name: ListConversationUsers :many
+SELECT u.id, u.username
+FROM conversation_participants cp
+INNER JOIN users u ON u.id = cp.user_id
+WHERE cp.conversation_id = $1
+    AND u.deleted_at IS NULL
+ORDER BY u.username ASC;
+
 -- name: IsParticipantInConversation :one
 SELECT EXISTS (
     SELECT 1
