@@ -15,6 +15,7 @@ var _ IConversationsUsecase = &ConversationsUsecase{}
 type IConversationsUsecase interface {
 	CreateConversation(c context.Context, payload dto.CreateConversationRequestDto) error
 	ListConversations(c context.Context, query dto.ListConversationsQueryDto) (dto.ListConversationsResponseDto, error)
+	GetConversationByID(c context.Context, conversationID string) (dto.ConversationDto, error)
 }
 
 type ConversationsUsecase struct {
@@ -95,6 +96,21 @@ func (conv *ConversationsUsecase) ListConversations(c context.Context, query dto
 			TotalCount: result.TotalItems,
 			Page:       page,
 		},
+	}
+
+	return response, nil
+}
+
+func (conv *ConversationsUsecase) GetConversationByID(c context.Context, conversationID string) (dto.ConversationDto, error) {
+	conve, err := conv.conveRepo.GetConversationByID(c, conversationID)
+	if err != nil {
+		return dto.ConversationDto{}, err
+	}
+
+	response := dto.ConversationDto{
+		ID:    conve.ID.String(),
+		Title: conve.Title,
+		Type:  conve.Type,
 	}
 
 	return response, nil

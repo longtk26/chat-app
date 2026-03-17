@@ -133,3 +133,37 @@ func (r *ConversationsRepo) ListConversationsByUserWithPagination(ctx context.Co
 		TotalPages:    totalPages,
 	}, nil
 }
+
+func (r *ConversationsRepo) GetConversationByID(ctx context.Context, conversationID string) (entities.ConversationEntity, error) {
+	// convert to pgtype.UUID
+	convID, err := uuid.Parse(conversationID)
+
+	if err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("invalid conversation ID: %w", err)
+	}
+	dbID := pgtype.UUID{
+		Bytes: [16]byte(convID),
+		Valid: true,
+	}
+
+	row, err := r.queries.GetConversationByID(ctx, dbID)
+	if err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("failed to get conversation: %w", err)
+	}
+
+	lastMessageID := ""
+	if row.LastMessageID.Valid {
+		lmID, err := uuid.FromBytes(row.LastMessageID.Bytes[:])
+		if err != nil {
+			return entities.ConversationEntity{}, fmt.Errorf("failed to parse last message ID: %w", err)
+		}
+		lastMessageID = lmID.String()
+	}
+
+	return entities.ConversationEntity{
+		ID:            convID,
+		Title:         row.Title.String,
+		Type:          row.Type,
+		LastMessageID: lastMessageID,
+	}, nil
+}

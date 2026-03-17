@@ -48,6 +48,20 @@ func (p *ConversationsPresenter) CreateConversation(c fiber.Ctx) {
 	c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Conversation created successfully"})
 }
 
-func (p *ConversationsPresenter) GetConversation(c fiber.Ctx) {}
+func (p *ConversationsPresenter) GetConversation(c fiber.Ctx) {
+	conversationID := c.Params("id")
+	if conversationID == "" {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Conversation ID is required"})
+		return
+	}
+
+	resp, err := p.usecase.GetConversationByID(c.Context(), conversationID)
+	if err != nil {
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get conversation"})
+		return
+	}
+
+	c.JSON(resp)
+}
 
 func (p *ConversationsPresenter) DeleteConversation(c fiber.Ctx) {}

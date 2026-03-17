@@ -18,4 +18,5 @@ type IConversationsRepo interface {
 		ListConversationsResult,
 		error,
 	)
+	GetConversationByID(ctx context.Context, conversationID string) (entities.ConversationEntity, error)
 }
