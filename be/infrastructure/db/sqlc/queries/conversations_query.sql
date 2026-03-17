@@ -22,16 +22,36 @@ WHERE cp.user_id = $1
 ORDER BY c.updated_at DESC;
 
 -- name: ListConversationsByUserWithPagination :many
+WITH filtered_ids AS (
+    SELECT 
+        c.*,
+        COUNT(*) OVER() AS total_count
+    FROM conversations c
+    INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+    WHERE cp.user_id = $1 
+      AND c.deleted_at IS NULL
+    ORDER BY c.updated_at DESC
+    LIMIT $2 OFFSET $3
+)
 SELECT 
-    c.*,
-    COUNT(*) OVER() AS total_conversations
-FROM conversations c
-INNER JOIN conversation_participants cp 
-    ON cp.conversation_id = c.id
-WHERE cp.user_id = $1
-  AND c.deleted_at IS NULL
-ORDER BY c.updated_at DESC
-LIMIT $2 OFFSET $3;
+    sqlc.embed(c),
+    f.total_count,
+    -- Aggregate all participants for the conversations found in the CTE
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'id', u.id,
+                'username', u.username
+            )
+        ), '[]'
+    )::jsonb AS participants
+FROM filtered_ids f
+INNER JOIN conversations c ON c.id = f.id
+INNER JOIN conversation_participants cp_all ON cp_all.conversation_id = c.id
+INNER JOIN users u ON u.id = cp_all.user_id
+GROUP BY 
+    c.id, f.total_count
+ORDER BY c.updated_at DESC;
 
 -- name: UpdateConversationLastMessage :exec
 UPDATE conversations

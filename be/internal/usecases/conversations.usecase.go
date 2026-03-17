@@ -94,7 +94,6 @@ func (conv *ConversationsUsecase) ListConversations(c context.Context, query dto
 		PaginationResponseDto: baseDto.PaginationResponseDto{
 			TotalCount: result.TotalItems,
 			Page:       page,
-			PageSize:   pageSize,
 		},
 	}
 

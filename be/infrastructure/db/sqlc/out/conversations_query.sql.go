@@ -101,16 +101,36 @@ func (q *Queries) ListConversationsByUser(ctx context.Context, userID pgtype.UUI
 }
 
 const listConversationsByUserWithPagination = `-- name: ListConversationsByUserWithPagination :many
+WITH filtered_ids AS (
+    SELECT 
+        c.id, c.title, c.type, c.last_message_id, c.created_at, c.updated_at, c.deleted_at,
+        COUNT(*) OVER() AS total_count
+    FROM conversations c
+    INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+    WHERE cp.user_id = $1 
+      AND c.deleted_at IS NULL
+    ORDER BY c.updated_at DESC
+    LIMIT $2 OFFSET $3
+)
 SELECT 
     c.id, c.title, c.type, c.last_message_id, c.created_at, c.updated_at, c.deleted_at,
-    COUNT(*) OVER() AS total_conversations
-FROM conversations c
-INNER JOIN conversation_participants cp 
-    ON cp.conversation_id = c.id
-WHERE cp.user_id = $1
-  AND c.deleted_at IS NULL
+    f.total_count,
+    -- Aggregate all participants for the conversations found in the CTE
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'id', u.id,
+                'username', u.username
+            )
+        ), '[]'
+    )::jsonb AS participants
+FROM filtered_ids f
+INNER JOIN conversations c ON c.id = f.id
+INNER JOIN conversation_participants cp_all ON cp_all.conversation_id = c.id
+INNER JOIN users u ON u.id = cp_all.user_id
+GROUP BY 
+    c.id, f.total_count
 ORDER BY c.updated_at DESC
-LIMIT $2 OFFSET $3
 `
 
 type ListConversationsByUserWithPaginationParams struct {
@@ -120,14 +140,9 @@ type ListConversationsByUserWithPaginationParams struct {
 }
 
 type ListConversationsByUserWithPaginationRow struct {
-	ID                 pgtype.UUID
-	Title              pgtype.Text
-	Type               string
-	LastMessageID      pgtype.UUID
-	CreatedAt          pgtype.Timestamptz
-	UpdatedAt          pgtype.Timestamptz
-	DeletedAt          pgtype.Timestamptz
-	TotalConversations int64
+	Conversation Conversation
+	TotalCount   int64
+	Participants []byte
 }
 
 func (q *Queries) ListConversationsByUserWithPagination(ctx context.Context, arg ListConversationsByUserWithPaginationParams) ([]ListConversationsByUserWithPaginationRow, error) {
@@ -140,14 +155,15 @@ func (q *Queries) ListConversationsByUserWithPagination(ctx context.Context, arg
 	for rows.Next() {
 		var i ListConversationsByUserWithPaginationRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Type,
-			&i.LastMessageID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.TotalConversations,
+			&i.Conversation.ID,
+			&i.Conversation.Title,
+			&i.Conversation.Type,
+			&i.Conversation.LastMessageID,
+			&i.Conversation.CreatedAt,
+			&i.Conversation.UpdatedAt,
+			&i.Conversation.DeletedAt,
+			&i.TotalCount,
+			&i.Participants,
 		); err != nil {
 			return nil, err
 		}

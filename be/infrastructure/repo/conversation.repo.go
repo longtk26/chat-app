@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -76,51 +77,41 @@ func (r *ConversationsRepo) ListConversationsByUserWithPagination(ctx context.Co
 
 	conversations := make([]entities.ConversationEntity, 0, len(rows))
 	for _, row := range rows {
-		conID, err := uuid.FromBytes(row.ID.Bytes[:])
+		conID, err := uuid.FromBytes(row.Conversation.ID.Bytes[:])
 		if err != nil {
 			return repo.ListConversationsResult{}, fmt.Errorf("failed to parse conversation ID: %w", err)
 		}
 
-		conversationUsersRows, err := r.queries.ListConversationUsers(ctx, row.ID)
-		if err != nil {
-			return repo.ListConversationsResult{}, fmt.Errorf("failed to list conversation users: %w", err)
+		var participants []struct {
+			UserID   uuid.UUID `json:"id"`
+			Username string    `json:"username"`
 		}
 
-		conversationUsers := make([]entities.UserConversationEntity, 0, len(conversationUsersRows))
-		for _, userRow := range conversationUsersRows {
-			if !userRow.ID.Valid {
-				continue
-			}
+		if err := json.Unmarshal(row.Participants, &participants); err != nil {
+			return repo.ListConversationsResult{}, fmt.Errorf("failed to unmarshal participants: %w", err)
+		}
 
-			userID, err := uuid.FromBytes(userRow.ID.Bytes[:])
-			if err != nil {
-				return repo.ListConversationsResult{}, fmt.Errorf("failed to parse user ID: %w", err)
-			}
-
+		conversationUsers := make([]entities.UserConversationEntity, 0, len(participants))
+		for _, userRow := range participants {
 			conversationUsers = append(conversationUsers, entities.UserConversationEntity{
-				UserID:   userID,
+				UserID:   userRow.UserID,
 				Username: userRow.Username,
 			})
 		}
 
 		lastMessageID := ""
-		if row.LastMessageID.Valid {
-			lmID, err := uuid.FromBytes(row.LastMessageID.Bytes[:])
+		if row.Conversation.LastMessageID.Valid {
+			lmID, err := uuid.FromBytes(row.Conversation.LastMessageID.Bytes[:])
 			if err != nil {
 				return repo.ListConversationsResult{}, fmt.Errorf("failed to parse last message ID: %w", err)
 			}
 			lastMessageID = lmID.String()
 		}
 
-		title := ""
-		if row.Title.Valid {
-			title = row.Title.String
-		}
-
 		conversations = append(conversations, entities.ConversationEntity{
 			ID:            conID,
-			Title:         title,
-			Type:          row.Type,
+			Title:         row.Conversation.Title.String,
+			Type:          row.Conversation.Type,
 			Users:         conversationUsers,
 			LastMessageID: lastMessageID,
 		})
@@ -128,7 +119,7 @@ func (r *ConversationsRepo) ListConversationsByUserWithPagination(ctx context.Co
 
 	totalItems := 0
 	if len(rows) > 0 {
-		totalItems = int(rows[0].TotalConversations)
+		totalItems = int(rows[0].TotalCount)
 	}
 
 	totalPages := 0
