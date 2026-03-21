@@ -19,5 +19,6 @@ func main() {
 		modules.ConfigureMessages,
 		modules.ConfigureUsers,
 		modules.ConfigureConversations,
+		modules.ConfigureSocket,
 	)
 }
