@@ -45,6 +45,7 @@ export function AuthForm({ type }: TAuthFormProps) {
             login(payload, {
                 onSuccess: (data) => {
                     localStorage.setItem("auth_token", data.access_token);
+                    localStorage.setItem("username", data.username);
                     toast.success("Login successful! Redirecting...");
                     router.push("/");
                 },

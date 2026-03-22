@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
 import ConversationItem from "../conversation-item";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -11,19 +12,49 @@ import {
 } from "../ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import UserItem from "../user-item";
+import { conversationsQuery } from "@/lib/query/conversations.query";
+import { Conversation } from "@/lib/types";
+import { usersQuery } from "@/lib/query/users.query";
+import { useQuery } from "@tanstack/react-query";
 
 const SideBarMessages = ({ children }: { children: React.ReactNode }) => {
+    const { token, username, userId } = useAuth();
+
+    const { data: conversationsData, isFetching } = useQuery(
+        conversationsQuery.listConversations(userId!),
+    );
+    const { data: usersData, isFetching: isUsersFetching } = useQuery(
+        usersQuery.listUsers(),
+    );
+
+    if (!token || !userId) {
+        return <div>Redirecting...</div>;
+    }
+
+    if (isFetching || isUsersFetching) {
+        return <div>Loading...</div>;
+    }
+
+    const conversations = conversationsData?.conversations || [];
+    const users = usersData || [];
+
     return (
         <SidebarProvider>
             <section className="w-78 h-full border-r">
                 <SidebarHeader className="flex flex-row w-full items-center justify-between px-2">
                     <div className="flex flex-col gap-4">
                         <h1 className="font-bold text-lg">Messages</h1>
-                        <p>Your name</p>
+                        <p className="capitalize">{username}</p>
                     </div>
                     <Button
                         variant="outline"
                         className="hover:bg-blue-600 hover:text-white"
+                        onClick={() => {
+                            localStorage.removeItem("auth_token");
+                            localStorage.removeItem("username");
+                            localStorage.removeItem("user_id");
+                            window.location.href = "/login";
+                        }}
                     >
                         Logout
                     </Button>
@@ -49,18 +80,21 @@ const SideBarMessages = ({ children }: { children: React.ReactNode }) => {
                             value="chats"
                             className="p-4 flex flex-col gap-4"
                         >
-                            <ConversationItem />
-                            <ConversationItem />
-                            <ConversationItem />
+                            {conversations.map((conversation: Conversation) => (
+                                <ConversationItem
+                                    key={conversation.id}
+                                    conversation={conversation}
+                                    currentUserId={userId}
+                                />
+                            )) || <p>No conversations found.</p>}
                         </TabsContent>
                         <TabsContent
                             value="contacts"
                             className="p-4 flex flex-col gap-4"
                         >
-                            <UserItem />
-                            <UserItem />
-                            <UserItem />
-                            <UserItem />
+                            {users.map((user) => (
+                                <UserItem key={user.ID} user={user} />
+                            )) || <p>No users found.</p>}
                         </TabsContent>
                     </Tabs>
                 </SidebarContent>

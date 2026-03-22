@@ -1,10 +1,9 @@
 import { getConversations } from "@/lib/api/conversations";
-import { useQuery } from "@tanstack/react-query";
 
-export const useConversationsQuery = (userId: string) => {
-    return useQuery({
+export const conversationsQuery = {
+    listConversations: (userId: string) => ({
         queryKey: ["conversations", userId],
         queryFn: () => getConversations(userId),
         enabled: !!userId,
-    });
+    }),
 };

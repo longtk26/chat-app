@@ -1,6 +1,21 @@
+import { Conversation } from "@/lib/types";
 import { Card, CardContent } from "../ui/card";
 
-const ConversationItem = () => {
+export type TConversationItemProps = {
+    conversation: Conversation;
+    currentUserId?: string;
+};
+
+const ConversationItem = ({
+    conversation,
+    currentUserId,
+}: TConversationItemProps) => {
+    const conversationName =
+        conversation.type === "private"
+            ? conversation.users.find((user) => user.id !== currentUserId)
+                  ?.username || "Unknown User"
+            : conversation.title || "Unnamed Group";
+
     return (
         <Card>
             <CardContent className="flex flex-row items-center gap-4">
@@ -9,7 +24,7 @@ const ConversationItem = () => {
                         👨
                     </span>
                 </div>
-                <h2 className="font-bold">Conversation Name</h2>
+                <h2 className="font-bold">{conversationName}</h2>
             </CardContent>
         </Card>
     );
