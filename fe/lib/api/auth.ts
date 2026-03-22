@@ -7,7 +7,7 @@ export const login = async ({
     username: string;
     password: string;
 }) => {
-    return apiFetch("/api/v1/auth/login", {
+    return apiFetch<{ access_token: string }>("/api/v1/auth/login", {
         method: "POST",
         body: JSON.stringify({ username, password }),
     });
