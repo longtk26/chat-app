@@ -72,23 +72,46 @@ func (q *Queries) GetMessageByID(ctx context.Context, id pgtype.UUID) (Message, 
 	return i, err
 }
 
-const listMessagesByConversation = `-- name: ListMessagesByConversation :many
+const listMessagesByConversationCursor = `-- name: ListMessagesByConversationCursor :many
 SELECT id, sender_id, recipient_id, conversation_id, content, sent_at, updated_at, deleted_at
-FROM messages
-WHERE conversation_id = $1
-  AND deleted_at IS NULL
-ORDER BY sent_at DESC
-LIMIT $2 OFFSET $3
+FROM messages m
+WHERE m.conversation_id = $1
+  AND m.deleted_at IS NULL
+  AND (
+    $2::uuid IS NULL
+    OR m.id = $2
+    OR (
+      m.sent_at < COALESCE(
+        (
+          SELECT m2.sent_at
+          FROM messages m2
+          WHERE m2.id = $2
+            AND m2.conversation_id = $1
+            AND m2.deleted_at IS NULL
+        ),
+        NOW()
+      )
+      AND ($3::timestamptz IS NULL OR m.sent_at < $3)
+    )
+  )
+ORDER BY m.sent_at DESC
+LIMIT $4
 `
 
-type ListMessagesByConversationParams struct {
+type ListMessagesByConversationCursorParams struct {
 	ConversationID pgtype.UUID
+	Column2        pgtype.UUID
+	Column3        pgtype.Timestamptz
 	Limit          int32
-	Offset         int32
 }
 
-func (q *Queries) ListMessagesByConversation(ctx context.Context, arg ListMessagesByConversationParams) ([]Message, error) {
-	rows, err := q.db.Query(ctx, listMessagesByConversation, arg.ConversationID, arg.Limit, arg.Offset)
+func (q *Queries) ListMessagesByConversationCursor(ctx context.Context, arg ListMessagesByConversationCursorParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, listMessagesByConversationCursor,
+		arg.ConversationID,
+		arg.Column2,
+		arg.Column3,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

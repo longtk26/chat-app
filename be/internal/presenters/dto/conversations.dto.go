@@ -11,7 +11,8 @@ type CreateConversationRequestDto struct {
 }
 
 type CreateConversationResponseDto struct {
-	Message string `json:"message"`
+	Conversation ConversationDto `json:"conversation"`
+	Message      string          `json:"message"`
 }
 
 // List conversations
@@ -32,8 +33,9 @@ type UserDto struct {
 }
 
 type ConversationDto struct {
-	ID    string    `json:"id"`
-	Title string    `json:"title"`
-	Type  string    `json:"type"`
-	Users []UserDto `json:"users"`
+	ID            string    `json:"id"`
+	Title         string    `json:"title"`
+	Type          string    `json:"type"`
+	Users         []UserDto `json:"users"`
+	LastMessageID string    `json:"last_message_id,omitempty"`
 }

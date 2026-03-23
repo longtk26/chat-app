@@ -30,6 +30,7 @@ func (p *AuthPresenter) Login(c fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(dto.LoginResponse{
 		AccessToken: token,
+		UserName:    req.Username,
 	})
 }
 

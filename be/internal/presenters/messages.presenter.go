@@ -1,25 +1,76 @@
 package presenters
 
-import "github.com/gofiber/fiber/v3"
+import (
+	"github.com/gofiber/fiber/v3"
+	"github.com/longtk26/chat-app/internal/presenters/dto"
+	"github.com/longtk26/chat-app/internal/usecases"
+)
 
-type MessagesPresenter struct{}
-
-func NewMessagesPresenter() *MessagesPresenter {
-	return &MessagesPresenter{}
+type MessagesPresenter struct {
+	usecase usecases.IMessagesUseCase
 }
 
-func (p *MessagesPresenter) ListMessages(c fiber.Ctx) error {
-	return nil
+func NewMessagesPresenter(usecase usecases.IMessagesUseCase) *MessagesPresenter {
+	return &MessagesPresenter{usecase: usecase}
 }
 
-func (p *MessagesPresenter) SendMessage(c fiber.Ctx) error {
-	return nil
+func (p *MessagesPresenter) ListMessages(c fiber.Ctx) {
+	var query dto.ListMessagesQueryDto
+	if err := c.Bind().Query(&query); err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid query parameters"})
+		return
+	}
+
+	resp, err := p.usecase.ListMessages(c.Context(), query)
+	if err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return
+	}
+
+	c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (p *MessagesPresenter) UpdateMessage(c fiber.Ctx) error {
-	return nil
+func (p *MessagesPresenter) SendMessage(c fiber.Ctx) {
+	var payload dto.SendMessageRequestDto
+	if err := c.Bind().Body(&payload); err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+		return
+	}
+
+	resp, err := p.usecase.SendMessage(c.Context(), payload)
+	if err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return
+	}
+
+	c.Status(fiber.StatusCreated).JSON(resp)
 }
 
-func (p *MessagesPresenter) DeleteMessage(c fiber.Ctx) error {
-	return nil
+func (p *MessagesPresenter) UpdateMessage(c fiber.Ctx) {
+	messageID := c.Params("id")
+
+	var payload dto.UpdateMessageRequestDto
+	if err := c.Bind().Body(&payload); err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+		return
+	}
+
+	resp, err := p.usecase.UpdateMessage(c.Context(), messageID, payload)
+	if err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return
+	}
+
+	c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (p *MessagesPresenter) DeleteMessage(c fiber.Ctx) {
+	messageID := c.Params("id")
+
+	if err := p.usecase.DeleteMessage(c.Context(), messageID); err != nil {
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return
+	}
+
+	c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Message deleted"})
 }

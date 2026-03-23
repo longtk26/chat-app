@@ -13,13 +13,30 @@ WHERE id = $1
   AND deleted_at IS NULL
 LIMIT 1;
 
--- name: ListMessagesByConversation :many
+-- name: ListMessagesByConversationCursor :many
 SELECT *
-FROM messages
-WHERE conversation_id = $1
-  AND deleted_at IS NULL
-ORDER BY sent_at DESC
-LIMIT $2 OFFSET $3;
+FROM messages m
+WHERE m.conversation_id = $1
+  AND m.deleted_at IS NULL
+  AND (
+    $2::uuid IS NULL
+    OR m.id = $2
+    OR (
+      m.sent_at < COALESCE(
+        (
+          SELECT m2.sent_at
+          FROM messages m2
+          WHERE m2.id = $2
+            AND m2.conversation_id = $1
+            AND m2.deleted_at IS NULL
+        ),
+        NOW()
+      )
+      AND ($3::timestamptz IS NULL OR m.sent_at < $3)
+    )
+  )
+ORDER BY m.sent_at DESC
+LIMIT $4;
 
 -- name: UpdateMessageContent :one
 UPDATE messages

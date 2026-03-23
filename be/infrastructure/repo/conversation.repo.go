@@ -160,10 +160,84 @@ func (r *ConversationsRepo) GetConversationByID(ctx context.Context, conversatio
 		lastMessageID = lmID.String()
 	}
 
+	users := make([]entities.UserConversationEntity, 0, len(row.Participants))
+	var participants []struct {
+		UserID   uuid.UUID `json:"id"`
+		Username string    `json:"username"`
+	}
+
+	if err := json.Unmarshal(row.Participants, &participants); err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("failed to unmarshal participants: %w", err)
+	}
+
+	users = make([]entities.UserConversationEntity, 0, len(participants))
+	for _, participant := range participants {
+		users = append(users, entities.UserConversationEntity{
+			UserID:   participant.UserID,
+			Username: participant.Username,
+		})
+	}
+
 	return entities.ConversationEntity{
 		ID:            convID,
 		Title:         row.Title.String,
 		Type:          row.Type,
 		LastMessageID: lastMessageID,
+		Users:         users,
+	}, nil
+}
+
+func (r *ConversationsRepo) GetPrivateConversationBetweenUsers(ctx context.Context, userID1, userID2 string) (entities.ConversationEntity, error) {
+	uid1, err := uuid.Parse(userID1)
+	if err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("invalid user ID 1: %w", err)
+	}
+
+	uid2, err := uuid.Parse(userID2)
+	if err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("invalid user ID 2: %w", err)
+	}
+
+	row, err := r.queries.GetPrivateConversationBetweenUsers(ctx, out.GetPrivateConversationBetweenUsersParams{
+		UserID:   pgtype.UUID{Bytes: uid1, Valid: true},
+		UserID_2: pgtype.UUID{Bytes: uid2, Valid: true},
+	})
+	if err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("failed to get private conversation: %w", err)
+	}
+
+	lastMessageID := ""
+	if row.LastMessageID.Valid {
+		lmID, err := uuid.FromBytes(row.LastMessageID.Bytes[:])
+		if err != nil {
+			return entities.ConversationEntity{}, fmt.Errorf("failed to parse last message ID: %w", err)
+		}
+		lastMessageID = lmID.String()
+	}
+
+	users := make([]entities.UserConversationEntity, 0, len(row.Participants))
+	var participants []struct {
+		UserID   uuid.UUID `json:"id"`
+		Username string    `json:"username"`
+	}
+
+	if err := json.Unmarshal(row.Participants, &participants); err != nil {
+		return entities.ConversationEntity{}, fmt.Errorf("failed to unmarshal participants: %w", err)
+	}
+
+	users = make([]entities.UserConversationEntity, 0, len(participants))
+	for _, participant := range participants {
+		users = append(users, entities.UserConversationEntity{
+			UserID:   participant.UserID,
+			Username: participant.Username,
+		})
+	}
+
+	return entities.ConversationEntity{
+		ID:            uuid.Must(uuid.FromBytes(row.ID.Bytes[:])),
+		Title:         row.Title.String,
+		Type:          row.Type,
+		LastMessageID: lastMessageID,
+		Users:         users,
 	}, nil
 }

@@ -8,6 +8,7 @@ type LoginRequest struct {
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
+	UserName     string `json:"username"`
 }
 
 type RegisterRequest struct {

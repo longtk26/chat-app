@@ -27,6 +27,7 @@ func ConfigureDatabase(registry types.ServiceRegistry) error {
 	// Register repository implementations
 	registry.Register(repositories.NewUserRepository, types.LifetimeSingleton)
 	registry.Register(repositories.NewConversationsRepo, types.LifetimeSingleton)
+	registry.Register(repositories.NewMessagesRepo, types.LifetimeSingleton)
 
 	return nil
 }

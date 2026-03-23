@@ -41,24 +41,113 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 }
 
 const getConversationByID = `-- name: GetConversationByID :one
-SELECT id, title, type, last_message_id, created_at, updated_at, deleted_at
-FROM conversations
-WHERE id = $1
-  AND deleted_at IS NULL
+SELECT
+    c.id,
+    c.title,
+    c.type,
+    c.created_at,
+    c.updated_at,
+    c.last_message_id,
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'id', u.id,
+                'username', u.username
+            )
+        ) FILTER (WHERE u.id IS NOT NULL),
+        '[]'::json
+    )::jsonb AS participants
+FROM conversations c
+LEFT JOIN conversation_participants cp
+    ON cp.conversation_id = c.id
+LEFT JOIN users u
+    ON u.id = cp.user_id
+WHERE c.id = $1
+  AND c.deleted_at IS NULL
+GROUP BY c.id
 LIMIT 1
 `
 
-func (q *Queries) GetConversationByID(ctx context.Context, id pgtype.UUID) (Conversation, error) {
+type GetConversationByIDRow struct {
+	ID            pgtype.UUID
+	Title         pgtype.Text
+	Type          string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	LastMessageID pgtype.UUID
+	Participants  []byte
+}
+
+func (q *Queries) GetConversationByID(ctx context.Context, id pgtype.UUID) (GetConversationByIDRow, error) {
 	row := q.db.QueryRow(ctx, getConversationByID, id)
-	var i Conversation
+	var i GetConversationByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Type,
-		&i.LastMessageID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.DeletedAt,
+		&i.LastMessageID,
+		&i.Participants,
+	)
+	return i, err
+}
+
+const getPrivateConversationBetweenUsers = `-- name: GetPrivateConversationBetweenUsers :one
+SELECT 
+    c.id,
+    c.title,
+    c.type,
+    c.created_at,
+    c.updated_at,
+    c.last_message_id,
+    json_agg(
+        json_build_object(
+            'id', u.id,
+            'username', u.username
+        )
+    ) AS participants
+FROM conversations c
+JOIN conversation_participants cp 
+    ON cp.conversation_id = c.id
+JOIN users u 
+    ON u.id = cp.user_id
+WHERE c.type = 'private'
+  AND c.deleted_at IS NULL
+GROUP BY c.id
+HAVING 
+    COUNT(*) = 2
+    AND COUNT(*) FILTER (WHERE cp.user_id = $1) = 1
+    AND COUNT(*) FILTER (WHERE cp.user_id = $2) = 1
+LIMIT 1
+`
+
+type GetPrivateConversationBetweenUsersParams struct {
+	UserID   pgtype.UUID
+	UserID_2 pgtype.UUID
+}
+
+type GetPrivateConversationBetweenUsersRow struct {
+	ID            pgtype.UUID
+	Title         pgtype.Text
+	Type          string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	LastMessageID pgtype.UUID
+	Participants  []byte
+}
+
+func (q *Queries) GetPrivateConversationBetweenUsers(ctx context.Context, arg GetPrivateConversationBetweenUsersParams) (GetPrivateConversationBetweenUsersRow, error) {
+	row := q.db.QueryRow(ctx, getPrivateConversationBetweenUsers, arg.UserID, arg.UserID_2)
+	var i GetPrivateConversationBetweenUsersRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Type,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastMessageID,
+		&i.Participants,
 	)
 	return i, err
 }

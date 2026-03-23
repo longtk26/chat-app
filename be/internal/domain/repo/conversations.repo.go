@@ -19,4 +19,5 @@ type IConversationsRepo interface {
 		error,
 	)
 	GetConversationByID(ctx context.Context, conversationID string) (entities.ConversationEntity, error)
+	GetPrivateConversationBetweenUsers(ctx context.Context, userID1, userID2 string) (entities.ConversationEntity, error)
 }

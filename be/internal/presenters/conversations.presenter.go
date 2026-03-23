@@ -40,12 +40,13 @@ func (p *ConversationsPresenter) CreateConversation(c fiber.Ctx) {
 		return
 	}
 
-	if err := p.usecase.CreateConversation(c.Context(), req); err != nil {
+	if response, err := p.usecase.CreateConversation(c.Context(), req); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create conversation"})
 		return
+	} else {
+		c.JSON(response)
 	}
 
-	c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Conversation created successfully"})
 }
 
 func (p *ConversationsPresenter) GetConversation(c fiber.Ctx) {
