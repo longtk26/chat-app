@@ -59,7 +59,15 @@ func (r *MessagesRepo) ListMessagesByConversation(ctx context.Context, conversat
 
 	messages := make([]entities.MessageEntity, 0, len(rows))
 	for _, row := range rows {
-		message, err := toMessageEntity(row)
+		message, err := toMessageEntity(out.Message{
+			ID:             row.ID,
+			SenderID:       row.SenderID,
+			ConversationID: row.ConversationID,
+			Content:        row.Content,
+			SentAt:         row.SentAt,
+			UpdatedAt:      row.UpdatedAt,
+		})
+		message.SenderName = row.SenderName
 		if err != nil {
 			return repo.ListMessagesCursorResult{}, err
 		}

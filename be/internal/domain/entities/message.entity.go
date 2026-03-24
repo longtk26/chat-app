@@ -5,6 +5,7 @@ import "time"
 type MessageEntity struct {
 	ID             string
 	SenderID       string
+	SenderName     string
 	ConversationID string
 	Content        string
 	SentAt         time.Time

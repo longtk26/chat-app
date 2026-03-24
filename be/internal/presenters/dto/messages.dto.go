@@ -11,6 +11,7 @@ type ListMessagesQueryDto struct {
 type MessageDto struct {
 	ID             string `json:"id"`
 	SenderID       string `json:"sender_id"`
+	SenderName     string `json:"sender_name"`
 	ConversationID string `json:"conversation_id"`
 	Content        string `json:"content"`
 	SentAt         string `json:"sent_at"`

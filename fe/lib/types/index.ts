@@ -23,3 +23,20 @@ export type ListConversationsResponse = {
     total_count: number;
     page: number;
 };
+
+export type Message = {
+    id: string;
+    sender_id: string;
+    sender_name: string;
+    conversation_id: string;
+    content: string;
+    sent_at: string;
+    updated_at: string;
+};
+
+export type ListMessagesResponse = {
+    messages: Message[];
+    limit: number;
+    next_cursor_time?: string;
+    has_more: boolean;
+};

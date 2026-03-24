@@ -14,8 +14,9 @@ WHERE id = $1
 LIMIT 1;
 
 -- name: ListMessagesByConversationCursor :many
-SELECT *
+SELECT m.*, u.username AS sender_name
 FROM messages m
+INNER JOIN users u ON m.sender_id = u.id
 WHERE m.conversation_id = $1
   AND m.deleted_at IS NULL
   AND (

@@ -1,10 +1,16 @@
-import { ListConversationsResponse } from "@/lib/types";
+import { Conversation, ListConversationsResponse } from "@/lib/types";
 import { apiFetch } from "./client";
 
 export const getConversations = async (
     userId: string,
 ): Promise<ListConversationsResponse> => {
     return apiFetch(`/api/v1/conversations?user_id=${userId}`);
+};
+
+export const getConversation = async (
+    conversationId: string,
+): Promise<Conversation> => {
+    return apiFetch(`/api/v1/conversations/${conversationId}`);
 };
 
 export const createConversation = async (payload: {

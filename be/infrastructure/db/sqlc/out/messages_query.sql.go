@@ -73,8 +73,9 @@ func (q *Queries) GetMessageByID(ctx context.Context, id pgtype.UUID) (Message, 
 }
 
 const listMessagesByConversationCursor = `-- name: ListMessagesByConversationCursor :many
-SELECT id, sender_id, recipient_id, conversation_id, content, sent_at, updated_at, deleted_at
+SELECT m.id, m.sender_id, m.recipient_id, m.conversation_id, m.content, m.sent_at, m.updated_at, m.deleted_at, u.username AS sender_name
 FROM messages m
+INNER JOIN users u ON m.sender_id = u.id
 WHERE m.conversation_id = $1
   AND m.deleted_at IS NULL
   AND (
@@ -105,7 +106,19 @@ type ListMessagesByConversationCursorParams struct {
 	Limit          int32
 }
 
-func (q *Queries) ListMessagesByConversationCursor(ctx context.Context, arg ListMessagesByConversationCursorParams) ([]Message, error) {
+type ListMessagesByConversationCursorRow struct {
+	ID             pgtype.UUID
+	SenderID       pgtype.UUID
+	RecipientID    pgtype.UUID
+	ConversationID pgtype.UUID
+	Content        string
+	SentAt         pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	DeletedAt      pgtype.Timestamptz
+	SenderName     string
+}
+
+func (q *Queries) ListMessagesByConversationCursor(ctx context.Context, arg ListMessagesByConversationCursorParams) ([]ListMessagesByConversationCursorRow, error) {
 	rows, err := q.db.Query(ctx, listMessagesByConversationCursor,
 		arg.ConversationID,
 		arg.Column2,
@@ -116,9 +129,9 @@ func (q *Queries) ListMessagesByConversationCursor(ctx context.Context, arg List
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []ListMessagesByConversationCursorRow
 	for rows.Next() {
-		var i Message
+		var i ListMessagesByConversationCursorRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SenderID,
@@ -128,6 +141,7 @@ func (q *Queries) ListMessagesByConversationCursor(ctx context.Context, arg List
 			&i.SentAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.SenderName,
 		); err != nil {
 			return nil, err
 		}

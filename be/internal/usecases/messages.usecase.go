@@ -144,6 +144,7 @@ func toMessageDto(message entities.MessageEntity) dto.MessageDto {
 		SenderID:       message.SenderID,
 		ConversationID: message.ConversationID,
 		Content:        message.Content,
+		SenderName:     message.SenderName,
 		SentAt:         message.SentAt.UTC().Format(time.RFC3339Nano),
 		UpdatedAt:      message.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
