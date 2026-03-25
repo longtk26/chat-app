@@ -16,9 +16,13 @@ import { conversationsQuery } from "@/lib/query/conversations.query";
 import { Conversation } from "@/lib/types";
 import { usersQuery } from "@/lib/query/users.query";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 const SideBarMessages = ({ children }: { children: React.ReactNode }) => {
     const { token, username, userId } = useAuth();
+    const searchParams = useSearchParams();
+    const router = useRouter();
 
     const { data: conversationsData, isFetching } = useQuery(
         conversationsQuery.listConversations(userId!),
@@ -27,6 +31,19 @@ const SideBarMessages = ({ children }: { children: React.ReactNode }) => {
         usersQuery.listUsers(),
     );
 
+    const conversations = conversationsData?.conversations || [];
+    const users = usersData || [];
+    const firstConversationId =
+        conversations.length > 0 ? conversations[0].id : null;
+    const conversationIdParam = searchParams.get("conversation_id");
+    const redirectConversationId = conversationIdParam || firstConversationId;
+
+    useEffect(() => {
+        if (redirectConversationId) {
+            router.replace(`/?conversation_id=${redirectConversationId}`);
+        }
+    }, [redirectConversationId]);
+
     if (!token || !userId) {
         return <div>Redirecting...</div>;
     }
@@ -34,9 +51,6 @@ const SideBarMessages = ({ children }: { children: React.ReactNode }) => {
     if (isFetching || isUsersFetching) {
         return <div>Loading...</div>;
     }
-
-    const conversations = conversationsData?.conversations || [];
-    const users = usersData || [];
 
     return (
         <SidebarProvider>
