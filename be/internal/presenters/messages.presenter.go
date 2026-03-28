@@ -2,16 +2,18 @@ package presenters
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/longtk26/chat-app/internal/hub"
 	"github.com/longtk26/chat-app/internal/presenters/dto"
 	"github.com/longtk26/chat-app/internal/usecases"
 )
 
 type MessagesPresenter struct {
 	usecase usecases.IMessagesUseCase
+	hub     *hub.SocketHub
 }
 
-func NewMessagesPresenter(usecase usecases.IMessagesUseCase) *MessagesPresenter {
-	return &MessagesPresenter{usecase: usecase}
+func NewMessagesPresenter(usecase usecases.IMessagesUseCase, h *hub.SocketHub) *MessagesPresenter {
+	return &MessagesPresenter{usecase: usecase, hub: h}
 }
 
 func (p *MessagesPresenter) ListMessages(c fiber.Ctx) {
@@ -42,6 +44,10 @@ func (p *MessagesPresenter) SendMessage(c fiber.Ctx) {
 		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		return
 	}
+
+	// Broadcast the new message to all other participants in the conversation room.
+	senderUUID := p.hub.GetSocketUUIDByUserID(resp.Message.ConversationID, resp.Message.SenderID)
+	p.hub.BroadcastToRoom(resp.Message.ConversationID, senderUUID, "new_message", resp.Message)
 
 	c.Status(fiber.StatusCreated).JSON(resp)
 }

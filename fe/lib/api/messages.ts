@@ -1,5 +1,15 @@
-import { ListMessagesResponse } from "@/lib/types";
+import { ListMessagesResponse, Message } from "@/lib/types";
 import { apiFetch } from "./client";
+
+export type SendMessageVariables = {
+    senderId: string;
+    conversationId: string;
+    content: string;
+};
+
+export type SendMessageResponse = {
+    message: Message;
+};
 
 type GetMessagesParams = {
     conversationId: string;
@@ -30,17 +40,13 @@ export const getMessages = async ({
     return apiFetch(`/api/v1/messages?${query.toString()}`);
 };
 
-export const sendMessage = async (payload: {
-    senderId: string;
-    conversationId: string;
-    content: string;
-}) => {
+export const sendMessage = async (payload: SendMessageVariables): Promise<SendMessageResponse> => {
     const payloadToSend = {
         sender_id: payload.senderId,
         conversation_id: payload.conversationId,
         content: payload.content,
     };
-    return apiFetch("/api/v1/messages", {
+    return apiFetch<SendMessageResponse>("/api/v1/messages", {
         method: "POST",
         body: JSON.stringify(payloadToSend),
     });

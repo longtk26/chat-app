@@ -179,7 +179,7 @@ func (conv *ConversationsUsecase) GetConversationByID(c context.Context, convers
 			Username: user.Username,
 		}
 	}
-	fmt.Printf("last message ID %s", conve.LastMessageID)
+
 	response := dto.ConversationDto{
 		ID:            conve.ID.String(),
 		Title:         conve.Title,

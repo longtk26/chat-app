@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/longtk26/chat-app/configs"
 	"github.com/longtk26/chat-app/internal/routers"
 	"github.com/matzefriedrich/parsley/pkg/bootstrap"
@@ -27,6 +28,7 @@ func NewApp(app *fiber.App, routeHandlers []routers.RouteHandler, config configs
 		}
 		return fiber.ErrUpgradeRequired
 	})
+	app.Use(cors.New())
 
 	fmt.Println("Registering route handlers...", routeHandlers)
 	for _, routeHandler := range routeHandlers {
