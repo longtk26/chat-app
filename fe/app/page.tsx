@@ -4,7 +4,7 @@ import SocketProvider from "@/provider/socket.provider";
 
 export default function Home() {
     return (
-        <main className="flex">
+        <main className="h-screen overflow-hidden">
             <SocketProvider>
                 <SideBarMessages>
                     <ChatView />

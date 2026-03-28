@@ -19,6 +19,8 @@ import { messagesQuery } from "@/lib/query/messages.query";
 import { ListMessagesResponse, Message } from "@/lib/types";
 import { messagesMutation } from "@/lib/mutation/messages.mutation";
 import { useSocket } from "@/provider/socket.provider";
+import { cn, getAvatarColor, getInitials } from "@/lib/utils";
+import { Send, MessageCircle } from "lucide-react";
 
 const MESSAGE_PAGE_LIMIT = 20;
 
@@ -87,7 +89,6 @@ export const ChatView = () => {
                 ["messages", conversationId, MESSAGE_PAGE_LIMIT],
                 (oldData) => {
                     if (!oldData) return oldData;
-                    // Deduplicate: skip if message already exists
                     const exists = oldData.pages.some((page) =>
                         page.messages.some((m) => m.id === message.id),
                     );
@@ -170,7 +171,6 @@ export const ChatView = () => {
             return;
         }
 
-        // Auto-scroll to bottom when new messages arrive if already near the bottom
         const distanceFromBottom =
             container.scrollHeight - container.scrollTop - container.clientHeight;
         if (distanceFromBottom < 100) {
@@ -203,7 +203,6 @@ export const ChatView = () => {
         form.reset();
     };
 
-    // Typing indicator: emit "typing" on input, then "stop_typing" after 2 s of silence
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleTyping = useCallback(() => {
@@ -215,43 +214,75 @@ export const ChatView = () => {
         }, 2000);
     }, [socket, conversationId]);
 
-    return (
-        <section className="w-full h-screen bg-gray-100 border-l relative">
-            <div className="flex items-center gap-4 p-4 w-full bg-white border-b">
-                <div className="w-12 h-12 rounded-full bg-blue-500/10 text-2xl relative flex flex-col">
-                    <span className="absolute inset-0 flex items-center justify-center text-blue-500">
-                        👨
-                    </span>
+    // Empty state — no conversation selected
+    if (!conversationId) {
+        return (
+            <section className="flex flex-col items-center justify-center w-full h-full bg-slate-50 text-center">
+                <div className="flex flex-col items-center gap-4 text-slate-400">
+                    <div className="h-16 w-16 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                        <MessageCircle className="h-8 w-8 text-indigo-400" />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-slate-600">No chat selected</p>
+                        <p className="text-sm mt-1">Choose a conversation from the sidebar to start chatting.</p>
+                    </div>
                 </div>
-                <div className="flex flex-col gap-1 justify-center">
-                    <span className="font-medium">{otherUser?.username}</span>
-                    <span className="text-xs text-gray-500">
-                        {isOtherUserTyping ? "Typing..." : "Active"}
+            </section>
+        );
+    }
+
+    return (
+        <section className="flex flex-col w-full h-full bg-slate-50">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-3 bg-white border-b border-slate-200 shadow-sm shrink-0">
+                <div
+                    className={cn(
+                        "h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0",
+                        getAvatarColor(otherUser?.username ?? ""),
+                    )}
+                >
+                    {getInitials(otherUser?.username ?? "?")}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-semibold text-slate-900 text-sm leading-tight">
+                        {otherUser?.username ?? "Unknown"}
+                    </span>
+                    <span
+                        className={cn(
+                            "text-xs leading-tight transition-colors",
+                            isOtherUserTyping
+                                ? "text-indigo-500 font-medium"
+                                : "text-slate-400",
+                        )}
+                    >
+                        {isOtherUserTyping ? "typing..." : "online"}
                     </span>
                 </div>
             </div>
 
+            {/* Messages */}
             <section
                 ref={messagesScrollRef}
                 onScroll={handleMessagesScroll}
-                className="flex flex-col gap-4 p-4 w-full h-[calc(100%-150px)] overflow-y-auto"
+                className="flex flex-col gap-3 px-5 py-4 flex-1 overflow-y-auto"
             >
                 {isFetchingNextPage && (
-                    <span className="text-xs text-center text-gray-500">
-                        Loading older messages...
+                    <span className="text-xs text-center text-slate-400 py-1">
+                        Loading older messages…
                     </span>
                 )}
 
                 {isMessagesPending && messages.length === 0 && (
-                    <span className="text-sm text-gray-500 text-center">
-                        Loading messages...
-                    </span>
+                    <div className="flex flex-col items-center justify-center flex-1 text-slate-400">
+                        <span className="text-sm">Loading messages…</span>
+                    </div>
                 )}
 
                 {!isMessagesPending && messages.length === 0 && (
-                    <span className="text-sm text-gray-500 text-center">
-                        No messages yet
-                    </span>
+                    <div className="flex flex-col items-center justify-center flex-1 gap-2 text-slate-400">
+                        <MessageCircle className="h-8 w-8 text-slate-300" />
+                        <span className="text-sm">No messages yet. Say hello!</span>
+                    </div>
                 )}
 
                 {messages.map((message: Message) => (
@@ -265,11 +296,12 @@ export const ChatView = () => {
                 ))}
             </section>
 
+            {/* Input area */}
             <form
                 onSubmit={form.handleSubmit(handleSendMessage)}
-                className="flex justify-between items-center gap-4 p-4 w-full bg-white border-t absolute bottom-0"
+                className="flex items-end gap-3 px-5 py-3 bg-white border-t border-slate-200 shrink-0"
             >
-                <FieldGroup>
+                <FieldGroup className="flex-1">
                     <Controller
                         name="message"
                         control={form.control}
@@ -277,12 +309,20 @@ export const ChatView = () => {
                             <Field data-invalid={fieldState.invalid}>
                                 <Textarea
                                     id="message"
-                                    placeholder="Enter your message"
+                                    placeholder="Type a message…"
                                     required
+                                    rows={1}
+                                    className="resize-none min-h-[40px] max-h-32 border-slate-200 focus-visible:ring-indigo-500 rounded-2xl py-2.5 px-4 text-sm leading-relaxed"
                                     {...field}
                                     onChange={(e) => {
                                         field.onChange(e);
                                         handleTyping();
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            form.handleSubmit(handleSendMessage)();
+                                        }
                                     }}
                                 />
                                 {fieldState.invalid && (
@@ -292,7 +332,13 @@ export const ChatView = () => {
                         )}
                     />
                 </FieldGroup>
-                <Button type="submit">Send</Button>
+                <Button
+                    type="submit"
+                    size="icon"
+                    className="h-10 w-10 rounded-full bg-indigo-600 hover:bg-indigo-700 shrink-0 mb-0.5"
+                >
+                    <Send className="h-4 w-4" />
+                </Button>
             </form>
         </section>
     );

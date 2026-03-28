@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { getCookie } from "@/utils/cookies";
 
 type EventCallback = (data: unknown) => void;
 
@@ -28,7 +29,9 @@ export class SocketClient {
                     data: unknown;
                 };
                 if (msg.event) {
-                    this.listeners.get(msg.event)?.forEach((cb) => cb(msg.data));
+                    this.listeners
+                        .get(msg.event)
+                        ?.forEach((cb) => cb(msg.data));
                 }
             } catch {
                 // ignore malformed messages
@@ -65,11 +68,12 @@ export const SocketContext = createContext<SocketClient | null>(null);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [client] = useState<SocketClient>(() => {
-        const token = localStorage.getItem("auth_token");
+        const token = getCookie("auth_token");
         const userId = token ? token.split("_")[1] : "anonymous";
-        const username = localStorage.getItem("username") ?? "";
+        const username = getCookie("username") ?? "";
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+        const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
         const wsBase = apiUrl.replace(/^http/, "ws");
         const url = `${wsBase}/socket.io/?user_id=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`;
 
