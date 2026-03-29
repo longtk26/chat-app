@@ -5,6 +5,7 @@ export type SendMessageVariables = {
     senderId: string;
     conversationId: string;
     content: string;
+    senderName?: string;
 };
 
 export type SendMessageResponse = {
@@ -40,11 +41,14 @@ export const getMessages = async ({
     return apiFetch(`/api/v1/messages?${query.toString()}`);
 };
 
-export const sendMessage = async (payload: SendMessageVariables): Promise<SendMessageResponse> => {
+export const sendMessage = async (
+    payload: SendMessageVariables,
+): Promise<SendMessageResponse> => {
     const payloadToSend = {
         sender_id: payload.senderId,
         conversation_id: payload.conversationId,
         content: payload.content,
+        sender_name: payload.senderName,
     };
     return apiFetch<SendMessageResponse>("/api/v1/messages", {
         method: "POST",

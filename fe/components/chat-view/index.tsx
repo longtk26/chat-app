@@ -8,7 +8,6 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useSearchParams } from "next/navigation";
 import {
-    InfiniteData,
     useInfiniteQuery,
     useQuery,
     useQueryClient,
@@ -29,7 +28,7 @@ export const ChatView = () => {
     const form = useForm<{ message: string }>({
         defaultValues: { message: "" },
     });
-    const { userId } = useAuth();
+    const { userId, username } = useAuth();
     const conversationId = searchParams.get("conversation_id");
     const socket = useSocket();
     const queryClient = useQueryClient();
@@ -79,33 +78,94 @@ export const ChatView = () => {
         };
     }, [socket, conversationId]);
 
-    // Handle incoming real-time events
-    useEffect(() => {
-        if (!conversationId) return;
+    const handleNewMessage = useCallback(
+        (data: unknown) => {
+            const payload = data as Partial<Message> & {
+                username?: string;
+                user_id?: string;
+                timestamp?: string;
+            };
+            const senderId = payload.sender_id ?? payload.user_id ?? "";
+            const senderName =
+                payload.sender_name ??
+                payload.username ??
+                users.find((user) => user.id === senderId)?.username ??
+                "Unknown";
 
-        const handleNewMessage = (data: unknown) => {
-            const message = data as Message;
-            queryClient.setQueryData<InfiniteData<ListMessagesResponse>>(
+            const message: Message = {
+                id:
+                    payload.id ??
+                    `${senderId}-${payload.timestamp ?? Date.now().toString()}`,
+                sender_id: senderId,
+                sender_name: senderName,
+                conversation_id: payload.conversation_id ?? "",
+                content: payload.content ?? "",
+                sent_at:
+                    payload.sent_at ??
+                    payload.timestamp ??
+                    new Date().toISOString(),
+                updated_at:
+                    payload.updated_at ??
+                    payload.sent_at ??
+                    payload.timestamp ??
+                    new Date().toISOString(),
+            };
+
+            if (!conversationId || message.conversation_id !== conversationId) {
+                return;
+            }
+
+            const container = messagesScrollRef.current;
+            const distanceFromBottom = container
+                ? container.scrollHeight -
+                  container.scrollTop -
+                  container.clientHeight
+                : Number.POSITIVE_INFINITY;
+
+            queryClient.setQueryData(
                 ["messages", conversationId, MESSAGE_PAGE_LIMIT],
-                (oldData) => {
-                    if (!oldData) return oldData;
+                (
+                    oldData: {
+                        pages: ListMessagesResponse[];
+                        pageParams: unknown[];
+                    } | null,
+                ) => {
+                    if (!oldData || oldData.pages.length === 0) return oldData;
+
                     const exists = oldData.pages.some((page) =>
                         page.messages.some((m) => m.id === message.id),
                     );
+
                     if (exists) return oldData;
+
                     return {
                         ...oldData,
                         pages: [
                             {
                                 ...oldData.pages[0],
-                                messages: [message, ...oldData.pages[0].messages],
+                                messages: [
+                                    message,
+                                    ...oldData.pages[0].messages,
+                                ],
                             },
                             ...oldData.pages.slice(1),
                         ],
                     };
                 },
             );
-        };
+
+            if (container && distanceFromBottom < 100) {
+                requestAnimationFrame(() => {
+                    container.scrollTop = container.scrollHeight;
+                });
+            }
+        },
+        [conversationId, queryClient, users],
+    );
+
+    // Handle incoming real-time events
+    useEffect(() => {
+        if (!conversationId) return;
 
         const handleUserTyping = (data: unknown) => {
             const { user_id } = data as { user_id: string };
@@ -127,7 +187,7 @@ export const ChatView = () => {
             socket.off("user_typing", handleUserTyping);
             socket.off("user_stop_typing", handleUserStopTyping);
         };
-    }, [socket, conversationId, userId, queryClient]);
+    }, [socket, conversationId, userId, handleNewMessage]);
 
     const loadOlderMessages = useCallback(async () => {
         const container = messagesScrollRef.current;
@@ -172,13 +232,15 @@ export const ChatView = () => {
         }
 
         const distanceFromBottom =
-            container.scrollHeight - container.scrollTop - container.clientHeight;
+            container.scrollHeight -
+            container.scrollTop -
+            container.clientHeight;
         if (distanceFromBottom < 100) {
             requestAnimationFrame(() => {
                 container.scrollTop = container.scrollHeight;
             });
         }
-    }, [messages.length]);
+    }, [conversationId, messages.length]);
 
     const formatTime = useCallback((time: string) => {
         const parsedDate = new Date(time);
@@ -199,6 +261,7 @@ export const ChatView = () => {
             conversationId,
             content: data.message,
             senderId: userId!,
+            senderName: username ?? "Unknown",
         });
         form.reset();
     };
@@ -223,8 +286,13 @@ export const ChatView = () => {
                         <MessageCircle className="h-8 w-8 text-indigo-400" />
                     </div>
                     <div>
-                        <p className="font-semibold text-slate-600">No chat selected</p>
-                        <p className="text-sm mt-1">Choose a conversation from the sidebar to start chatting.</p>
+                        <p className="font-semibold text-slate-600">
+                            No chat selected
+                        </p>
+                        <p className="text-sm mt-1">
+                            Choose a conversation from the sidebar to start
+                            chatting.
+                        </p>
                     </div>
                 </div>
             </section>
@@ -281,7 +349,9 @@ export const ChatView = () => {
                 {!isMessagesPending && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center flex-1 gap-2 text-slate-400">
                         <MessageCircle className="h-8 w-8 text-slate-300" />
-                        <span className="text-sm">No messages yet. Say hello!</span>
+                        <span className="text-sm">
+                            No messages yet. Say hello!
+                        </span>
                     </div>
                 )}
 
@@ -321,7 +391,9 @@ export const ChatView = () => {
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter" && !e.shiftKey) {
                                             e.preventDefault();
-                                            form.handleSubmit(handleSendMessage)();
+                                            form.handleSubmit(
+                                                handleSendMessage,
+                                            )();
                                         }
                                     }}
                                 />

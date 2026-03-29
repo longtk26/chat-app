@@ -93,11 +93,22 @@ func (u *MessagesUseCase) SendMessage(ctx context.Context, payload dto.SendMessa
 		ConversationID: payload.ConversationID,
 		Content:        payload.Content,
 	})
+
 	if err != nil {
 		return dto.SendMessageResponseDto{}, err
 	}
 
-	return dto.SendMessageResponseDto{Message: toMessageDto(createdMessage)}, nil
+	entityMessage := entities.MessageEntity{
+		ID:             createdMessage.ID,
+		SenderID:       createdMessage.SenderID,
+		ConversationID: createdMessage.ConversationID,
+		Content:        createdMessage.Content,
+		SentAt:         createdMessage.SentAt,
+		UpdatedAt:      createdMessage.UpdatedAt,
+		SenderName:     payload.SenderName,
+	}
+
+	return dto.SendMessageResponseDto{Message: toMessageDto(entityMessage)}, nil
 }
 
 func (u *MessagesUseCase) UpdateMessage(ctx context.Context, messageID string, payload dto.UpdateMessageRequestDto) (dto.UpdateMessageResponseDto, error) {

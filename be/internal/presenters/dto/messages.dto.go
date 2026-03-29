@@ -27,6 +27,7 @@ type SendMessageRequestDto struct {
 	SenderID       string `json:"sender_id"`
 	ConversationID string `json:"conversation_id"`
 	Content        string `json:"content"`
+	SenderName     string `json:"sender_name"`
 }
 
 type SendMessageResponseDto struct {

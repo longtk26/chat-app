@@ -10,7 +10,6 @@ import (
 
 func main() {
 	ctx := context.Background()
-
 	bootstrap.RunParsleyApplication(ctx, internal.NewApp,
 		modules.ConfigureConfig,
 		modules.ConfigureFiber,

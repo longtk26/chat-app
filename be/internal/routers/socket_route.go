@@ -33,6 +33,12 @@ func (r *SocketRoute) Register(app *fiber.App) {
 
 	app.Get("/socket.io/*", socketio.New(func(kws *socketio.Websocket) {
 		userID := kws.Query("user_id", "anonymous")
+
+		if userID == "anonymous" {
+			fmt.Printf("socket connection rejected: missing user_id\n")
+			kws.Close()
+			return
+		}
 		username := kws.Query("username", "")
 		kws.SetAttribute("user_id", userID)
 		kws.SetAttribute("username", username)

@@ -1,5 +1,7 @@
 run:
 	go run cmd/main.go
+run-air:
+	air -c .air.toml
 sqlc:
 	sqlc generate -f infrastructure/db/sqlc/sqlc.yaml
 newmg:
