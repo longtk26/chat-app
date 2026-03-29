@@ -76,6 +76,7 @@ func (r *SocketRoute) Register(app *fiber.App) {
 			return
 		}
 		userID := ep.Kws.GetStringAttribute("user_id")
+		// TODO: Check if user is actually a participant of the conversation before allowing join
 		r.hub.JoinRoom(ep.SocketUUID, userID, convID)
 		r.hub.BroadcastToRoom(convID, ep.SocketUUID, "user_active", map[string]string{
 			"user_id": userID,
